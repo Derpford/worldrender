@@ -160,7 +160,7 @@ class WRModContainer : Inventory abstract {
         "GEMSC0",
         "GEMSD0",
         "GEMSE0"
-    }
+    };
 
     default {
         WRModContainer.ModRange 1,3; // By default, can have up to 3.
