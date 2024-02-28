@@ -144,6 +144,8 @@ class WRModContainer : Inventory abstract {
     int minmods, maxmods; // How many mods can be put in this one?
     Property ModRange: minmods,maxmods;
 
+    bool sprite; // Workaround for setting up the sprite *apparently* not working in PostBeginPlay
+
     static const string SpriteList[] = {
         "GEMBA0",
         "GEMBB0",
@@ -175,8 +177,6 @@ class WRModContainer : Inventory abstract {
         // Append mod classname and a weight to modrates to add it to the drop table.
 
     override void PostBeginPlay() {
-        int spritesel = random(0,SpriteList.size());
-        picnum = TexMan.CheckForTexture(SpriteList[spritesel]);
         SetupModRates();
         // Once that's done...
         maxmods = min(maxmods, modrates.CountUsed()); // Can only have as many mods as there are in the drop table.
@@ -192,10 +192,17 @@ class WRModContainer : Inventory abstract {
         }
     }
 
-    states {
-        Spawn:
-            "####" "#" -1;
-            Stop;
+    void SetupSprite() {
+        int spritesel = random(0,SpriteList.size());
+        picnum = TexMan.CheckForTexture(SpriteList[spritesel]);
+    }
+
+    override void Tick() {
+        if (!sprite) {
+            SetupSprite();
+            sprite = true;
+        }
+        super.Tick();
     }
 }
 
