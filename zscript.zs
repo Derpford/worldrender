@@ -1,7 +1,7 @@
 version "4.11"
 
 // Libraries.
-#include "zscript/WRZForms/Include.zsc"
+#include "WRZForms/Include.zsc"
 
 #include "zscript/weapon.zs"
 #include "zscript/ammo.zs"
