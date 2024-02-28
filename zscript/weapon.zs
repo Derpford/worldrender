@@ -144,6 +144,24 @@ class WRModContainer : Inventory abstract {
     int minmods, maxmods; // How many mods can be put in this one?
     Property ModRange: minmods,maxmods;
 
+    static const string SpriteList[] = {
+        "GEMBA0",
+        "GEMBB0",
+        "GEMBC0",
+        "GEMBD0",
+        "GEMBE0",
+        "GEMMA0",
+        "GEMMB0",
+        "GEMMC0",
+        "GEMMD0",
+        "GEMME0",
+        "GEMSA0",
+        "GEMSB0",
+        "GEMSC0",
+        "GEMSD0",
+        "GEMSE0"
+    }
+
     default {
         WRModContainer.ModRange 1,3; // By default, can have up to 3.
     }
@@ -157,6 +175,8 @@ class WRModContainer : Inventory abstract {
         // Append mod classname and a weight to modrates to add it to the drop table.
 
     override void PostBeginPlay() {
+        int spritesel = random(0,SpriteList.size());
+        picnum = TexMan.CheckForTexture(SpriteList[spritesel]);
         SetupModRates();
         // Once that's done...
         maxmods = min(maxmods, modrates.CountUsed()); // Can only have as many mods as there are in the drop table.
@@ -170,6 +190,12 @@ class WRModContainer : Inventory abstract {
             mod.BecomeItem();
             modlist.push(mod);
         }
+    }
+
+    states {
+        Spawn:
+            "####" "#" -1;
+            Stop;
     }
 }
 
