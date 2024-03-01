@@ -13,8 +13,11 @@ class InvMenuHandler : WRZFHandler {
 
     // - A selector for the 'current' weapon and 'current' modcont.
     int sweapon;
+    WRZFRadioController selweapon;
     int sequipped;
+    WRZFRadioController selequipped;
     int smod;
+    WRZFRadioController selmod;
     // - Page selectors for the weapon/modcont lists. You should be able to view 10 of these at a time, I think.
     int pageweapon;
     int pagemod;
@@ -73,6 +76,12 @@ class InvMenuHandler : WRZFHandler {
         sweapon = -1; // -1 means no selection.
         smod = -1;
         sequipped = -1;
+        selweapon = new("WRZFRadioController");
+        selweapon.curVal = -1;
+        selequipped = new("WRZFRadioController");
+        selequipped.curVal = -1;
+        selmod = new("WRZFRadioController");
+        selmod.curVal = -1;
         pageweapon = 0;
         pagemod = 0;
         // Populate the weapon, mod, and equipped lists.
@@ -137,42 +146,52 @@ class InvMenuView : WRZFGenericMenu {
             (1,1)
         );
 
+        bg.setDontBlockMouse(true);
         bg.pack(mainFrame);
 
 
         // Let's start simple: the list of mods in your inventory.
         int modlistlength = max(640,handler.mods.size() * (itemsizey + padding));
         modframe = WRZFListFrame.Create((4,4),(480,modlistlength),2.0);
+        // modframe.setDontBlockMouse(true);
         modframe.pack(mainFrame);
-        modframe.setDontBlockMouse(true);
         for (int i = 0; i < handler.mods.Size(); i++) {
             if (i >= handler.mods.Size()) { break; }
             WRZFFrame itemframe = WRZFFrame.Create((0,0),(itemsizex,itemsizey));
+            // itemframe.setDontBlockMouse(true);
+            itemframe.pack(modframe);
             let tx = TexMan.GetName(handler.mods[i].Icon);
             int sizex, sizey;
             [sizex,sizey] = TexMan.GetSize(handler.mods[i].Icon);
             vector2 size = (sizex,sizey);
             Vector2 btnsize = (itemsizex,itemsizey);
             Vector2 pos = (0,0);
-            let ibtn = WRZFDebugToggleButton.Create (
+            let ibtn = WRZFRadioToggleButton.Create (
                 pos,
                 btnsize,
-                inactive: btex,
-                hover: btex,
-                click: btex2,
+                handler.selmod,
+                i,
+                inactive: btex2,
+                hover: btex2,
+                click: btex,
+                disabled: btex,
                 cmdHandler: handler,
                 command: "mod;" .. i
             );
 
             ibtn.pack(itemframe);
-            WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2)).pack(itemframe);
-            WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",handler.mods[i].GetTag()),autosize:true).pack(itemframe);
+            let modicon = WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2));
+            // modicon.setDontBlockMouse(true);
+            modicon.pack(itemframe);
+            let modname = WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",handler.mods[i].GetTag()),autosize:true);
+            // modname.setDontBlockMouse(true);
+            modname.pack(itemframe);
             for (int j = 0; j < handler.mods[i].modlist.size(); j++) {
                 let m = handler.mods[i].modlist[j];
-                WRZFLabel.Create((48,9 + (9 * j)),btnsize,text:m.GetTag(),autosize:true).pack(itemframe);
+                let affixdesc = WRZFLabel.Create((48,9 + (9 * j)),btnsize,text:m.GetTag(),autosize:true);
+                // affixdesc.setDontBlockMouse(true);
+                affixdesc.pack(itemframe);
             }
-            itemframe.setDontBlockMouse(true);
-            itemframe.pack(modframe);
         }
         // Buttons for paging.
         WRZFButton.Create (
@@ -201,12 +220,69 @@ class InvMenuView : WRZFGenericMenu {
 
     override void ticker() {
         modframe.SetPosY(4 - ((itemsizey + padding) * handler.pagemod));
+        super.Ticker();
     }
 }
 
-class WRZFDebugToggleButton : WRZFToggleButton {
-    override bool OnUIEvent(WRZFUiEvent ev) {
-        console.printf("Event: %0.1f,%0.1f",ev.MouseX,ev.MouseY);
-        return super.OnUIEvent(ev);
+class WRZFRadioToggleButton : WRZFRadioButton {
+    // Like a RadioButton, but you can click it again to unselect it.
+    private bool click2; // WHY is EVERYTHING FUCKING PRIVATE
+	private bool hover2;
+
+    override void Activate() {
+        if (getVariable().curVal != getValue()) {
+            console.printf("Turning on.");
+            super.Activate();
+        } else {
+            // Deselect this item.
+            getVariable().curVal = -1;
+            console.printf("Turning off.");
+            if (cmdHandler != NULL) {
+                cmdHandler.radioButtonChanged(self, command, getVariable());
+            }
+        }
     }
+
+	override bool onNavEvent(WRZFNavEventType type, bool fromController) {
+        if (getVariable().curVal != getValue()) {
+            console.printf("Turning on.");
+            super.OnNavEvent(type,fromController);
+            return true;
+        } else {
+            // Deselect this item.
+            getVariable().curVal = -1;
+            console.printf("Turning off.");
+            if (cmdHandler != NULL) {
+                cmdHandler.radioButtonChanged(self, command, getVariable());
+            }
+            return true;
+        }
+        return false;
+    }
+
+    override bool onUIEvent(WRZFUiEvent ev) {
+		// if the player's clicked, and their mouse is in the right place, set the state accordingly
+		if (ev.type == UIEvent.Type_LButtonDown) {
+			let mousePos = getGlobalStore().mousePos;
+			WRZFAABB screenBox; boxToScreen(screenBox);
+			if (!mouseBlock && isEnabled() && screenBox.pointCollides(mousePos)) {
+				click2 = true;
+				setHoverBlock(self);
+			}
+		}
+		// if the player's releasing, check if their mouse is still in the correct range and trigger method if it was
+		else if (ev.type == UIEvent.Type_LButtonUp) {
+			if (isEnabled()) {
+				let mousePos = getGlobalStore().mousePos;
+				WRZFAABB screenBox; boxToScreen(screenBox);
+				if (screenBox.pointCollides(mousePos) && click2) {
+                    Activate();
+				}
+				click2 = false;
+				setHoverBlock(NULL);
+			}
+		}
+		// if the player's mouse has moved, update the tracked position and do a quick hover check
+		return false;
+	}
 }
