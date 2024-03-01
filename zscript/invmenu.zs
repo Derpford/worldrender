@@ -154,7 +154,7 @@ class InvMenuView : WRZFGenericMenu {
             vector2 size = (sizex,sizey);
             Vector2 btnsize = (itemsizex,itemsizey);
             Vector2 pos = (0,0);
-            let ibtn = WRZFToggleButton.Create (
+            let ibtn = WRZFDebugToggleButton.Create (
                 pos,
                 btnsize,
                 inactive: btex,
@@ -201,5 +201,12 @@ class InvMenuView : WRZFGenericMenu {
 
     override void ticker() {
         modframe.SetPosY(4 - ((itemsizey + padding) * handler.pagemod));
+    }
+}
+
+class WRZFDebugToggleButton : WRZFToggleButton {
+    override bool OnUIEvent(WRZFUiEvent ev) {
+        console.printf("Event: %0.1f,%0.1f",ev.MouseX,ev.MouseY);
+        return super.OnUIEvent(ev);
     }
 }
