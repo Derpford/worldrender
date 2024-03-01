@@ -1,5 +1,9 @@
 class PressTheAttack : WRMod {
 
+    default {
+        Tag "Every 3rd hit on an enemy triggers a burst of damage.";
+    }
+
     override bool OnHit(WRProj proj, Actor tgt) {
         if (!tgt) { return true; } // PTA does not trigger unless there's a target.
         tgt.GiveInventory("PTAStack",1);
@@ -11,6 +15,17 @@ class PressTheAttack : WRMod {
         }
 
         return false; // each projectile triggers just one PTA stack
+    }
+
+    override string GetAffix() {
+        static const string Affixes[] = {
+            "Three-hit ",
+            "Overbearing ",
+            "Triple-Tap ",
+            "Focused ",
+            "Burst-fire "
+        };
+        return Affixes[random(0,Affixes.size()-1)];
     }
 
 }
@@ -38,5 +53,6 @@ class PTABurst : Actor {
 class PTAModContainer : SingleModContainer {
     default {
         SingleModContainer.Mod "PressTheAttack";
+        Tag "Press The Attack Mod";
     }
 }

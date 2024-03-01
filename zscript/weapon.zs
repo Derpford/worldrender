@@ -135,6 +135,11 @@ class WRMod : Inventory abstract {
     
     virtual void OnFire(WRProj proj) {}
         // Called when firing the projectile.
+
+    virtual String GetAffix() {
+        return "Placeholder "; // WRModContainers use this to set up their tags.
+        // Affixes should include their trailing space or dash.
+    }
 }
 
 class WRModContainer : Inventory abstract {
@@ -173,6 +178,10 @@ class WRModContainer : Inventory abstract {
         // They don't stack, because different WRMCs of the same type can have different mods in them.
     }
 
+    override string PickupMessage() {
+        return String.Format("Weapon Mod: %s",GetTag());
+    }
+
     virtual void SetupModRates() {}
         // Append mod classname and a weight to modrates to add it to the drop table.
 
@@ -185,16 +194,20 @@ class WRModContainer : Inventory abstract {
         int modgen = random(minmods,maxmods); // TODO: Some kind of weighting to make high modcounts rarer.
         Array<Name> draws;
         ModsFromDeck(modrates,modgen,draws);
+        String t;
         foreach (m : draws) {
             WRMod mod = WRMod(Spawn(m));
             mod.BecomeItem();
+            t = t .. mod.GetAffix();
             modlist.push(mod);
         }
+        SetTag(t .. "Mod");
     }
 
     void SetupSprite() {
-        int spritesel = random(0,SpriteList.size());
+        int spritesel = random(0,SpriteList.size()-1);
         picnum = TexMan.CheckForTexture(SpriteList[spritesel]);
+        icon = picnum;
     }
 
     override void Tick() {

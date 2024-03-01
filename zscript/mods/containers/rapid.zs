@@ -1,7 +1,7 @@
 class RapidModContainer : WRModContainer {
     // Voted most likely to hold down the trigger.
     default {
-        WRModContainer.ModRange 2,2;
+        WRModContainer.ModRange 1,4;
     }
 
     override void SetupModRates() {

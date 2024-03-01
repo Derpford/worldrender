@@ -1,4 +1,8 @@
 class ExplosiveMod : WRMod {
+    default {
+        Tag "Once a second, causes an explosion on impact.";
+    }
+
     double timer;
     override void Tick() {
         super.Tick();
@@ -11,12 +15,24 @@ class ExplosiveMod : WRMod {
         }
         return true; // Not retriggering is handled by the timer.
     }
+
+    override string GetAffix() {
+        static const string Affixes[] = {
+            "Boom ",
+            "Blast-",
+            "Exploding ",
+            "Nitro ",
+            "Krak "
+        };
+        return Affixes[random(0,Affixes.size()-1)];
+    }
 }
 
 class EModBlast : Actor {
     // Explodes. That's it.
     default {
         +NOGRAVITY;
+        Tag "Explosive Mod";
     }
 
     states {
