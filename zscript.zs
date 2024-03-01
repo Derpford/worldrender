@@ -2,10 +2,11 @@ version "4.11"
 
 // Libraries.
 #include "WRZForms/Include.zsc"
-
+// Core.
 #include "zscript/weapon.zs"
 #include "zscript/ammo.zs"
 #include "zscript/weighted.zs"
+#include "zscript/invmenu.zs"
 // Mods.
 #include "zscript/mods/explosive.zs"
 #include "zscript/mods/pta.zs"
