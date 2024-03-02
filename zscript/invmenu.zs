@@ -181,15 +181,15 @@ class InvMenuView : WRZFGenericMenu {
 
             ibtn.pack(itemframe);
             let modicon = WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2));
-            // modicon.setDontBlockMouse(true);
+            modicon.setDontBlockMouse(true);
             modicon.pack(itemframe);
             let modname = WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",handler.mods[i].GetTag()),autosize:true);
-            // modname.setDontBlockMouse(true);
+            modname.setDontBlockMouse(true);
             modname.pack(itemframe);
             for (int j = 0; j < handler.mods[i].modlist.size(); j++) {
                 let m = handler.mods[i].modlist[j];
                 let affixdesc = WRZFLabel.Create((48,9 + (9 * j)),btnsize,text:m.GetTag(),autosize:true);
-                // affixdesc.setDontBlockMouse(true);
+                affixdesc.setDontBlockMouse(true);
                 affixdesc.pack(itemframe);
             }
         }
@@ -228,6 +228,22 @@ class WRZFRadioToggleButton : WRZFRadioButton {
     // Like a RadioButton, but you can click it again to unselect it.
     private bool click2; // WHY is EVERYTHING FUCKING PRIVATE
 	private bool hover2;
+
+	static WRZFRadioToggleButton create(
+		Vector2 pos, Vector2 size,
+		WRZFRadioController variable, int value,
+		WRZFBoxTextures inactive = NULL, WRZFBoxTextures hover = NULL,
+		WRZFBoxTextures click = NULL, WRZFBoxTextures disabled = NULL,
+		string text = "", Font fnt = NULL, double textScale = 1, int textColor = Font.CR_WHITE,
+		AlignType alignment = AlignType_Center, WRZFHandler cmdHandler = NULL, Name command = ''
+	) {
+		let ret = new('WRZFRadioToggleButton');
+
+		ret.config(variable, value, inactive, hover, click, disabled, text, fnt, textScale, textColor, alignment, cmdHandler, command);
+		ret.setBox(pos, size);
+
+		return ret;
+	}
 
     override void Activate() {
         if (getVariable().curVal != getValue()) {
