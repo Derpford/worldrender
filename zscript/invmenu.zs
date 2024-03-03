@@ -6,10 +6,11 @@ class InvMenuHandler : WRZFHandler {
     // - An array of weapons and an array of mods. This can be constructed when the menu opens.
     // The array of mods may change due to the player generating a new mod. 
     // The array of weapons *SHOULD* be static once it's generated.
-    Array<WRWeapon> weapons;
+    Array<Object> weapons;
     Array<Object> mods;
     // - While building the weapons array, check the slot numbers to fill out a 'currently equipped' list.
-    Array<WRWeapon> equipped;
+    Array<Object> equipped;
+    // I get to do all the type safety manually for these, because arrays can't be casted to other arrays for some reason.
 
     // - A selector for the 'current' weapon and 'current' modcont.
     int sweapon;
@@ -57,7 +58,7 @@ class InvMenuHandler : WRZFHandler {
         }
     }
 
-    void PopWepList(Class filter, out Array<WRWeapon> items, out Array<WRWeapon> equips) {
+    void PopWepList(Class filter, out Array<Object> items, out Array<Object> equips) {
         let plr = players[consoleplayer].mo;
         let inv = plr.inv;
         while (inv) {
@@ -108,44 +109,84 @@ class ModUIBuilder : ItemUIBuilder {
         WRZFBoxTextures inactive,WRZFBoxTextures hover,
         WRZFBoxTextures click,WRZFBoxTextures disabled
     ) {
-            WRModContainer container = WRModContainer(item);
-            if (!container) { return; }
-            InvMenuHandler h = InvMenuHandler(handler);
-            if (!h) { return; } // H!
-            WRZFFrame itemframe = WRZFFrame.Create((0,0),(itemsizex,itemsizey));
-            itemframe.pack(parent);
-            let tx = TexMan.GetName(container.Icon);
-            int sizex, sizey;
-            [sizex,sizey] = TexMan.GetSize(container.Icon);
-            vector2 size = (sizex,sizey);
-            Vector2 btnsize = (itemsizex,itemsizey);
-            Vector2 pos = (0,0);
-            let ibtn = WRZFRadioToggleButton.Create (
-                pos,
-                btnsize,
-                h.selmod,
-                ival,
-                inactive: inactive,
-                hover: hover,
-                click: click,
-                disabled: disabled,
-                cmdHandler: h,
-                command: "mod;" .. ival
-            );
+        WRModContainer container = WRModContainer(item);
+        if (!container) { return; }
+        InvMenuHandler h = InvMenuHandler(handler);
+        if (!h) { return; } // H!
+        WRZFFrame itemframe = WRZFFrame.Create((0,0),(itemsizex,itemsizey));
+        itemframe.pack(parent);
+        let tx = TexMan.GetName(container.Icon);
+        int sizex, sizey;
+        [sizex,sizey] = TexMan.GetSize(container.Icon);
+        vector2 size = (sizex,sizey);
+        Vector2 btnsize = (itemsizex,itemsizey);
+        Vector2 pos = (0,0);
+        let ibtn = WRZFRadioToggleButton.Create (
+            pos,
+            btnsize,
+            h.selmod,
+            ival,
+            inactive: inactive,
+            hover: hover,
+            click: click,
+            disabled: disabled,
+            cmdHandler: h,
+            command: "mod;" .. ival
+        );
 
-            ibtn.pack(itemframe);
-            let modicon = WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2));
-            modicon.setDontBlockMouse(true);
-            modicon.pack(itemframe);
-            let modname = WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",item.GetTag()),autosize:true);
-            modname.setDontBlockMouse(true);
-            modname.pack(itemframe);
-            for (int j = 0; j < container.modlist.size(); j++) {
-                let m = container.modlist[j];
-                let affixdesc = WRZFLabel.Create((48,9 + (9 * j)),btnsize,text:m.GetTag(),autosize:true);
-                affixdesc.setDontBlockMouse(true);
-                affixdesc.pack(itemframe);
-            }
+        ibtn.pack(itemframe);
+        let modicon = WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2));
+        modicon.setDontBlockMouse(true);
+        modicon.pack(itemframe);
+        let modname = WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",item.GetTag()),autosize:true);
+        modname.setDontBlockMouse(true);
+        modname.pack(itemframe);
+        for (int j = 0; j < container.modlist.size(); j++) {
+            let m = container.modlist[j];
+            let affixdesc = WRZFLabel.Create((48,9 + (9 * j)),btnsize,text:m.GetTag(),autosize:true);
+            affixdesc.setDontBlockMouse(true);
+            affixdesc.pack(itemframe);
+        }
+    }
+}
+
+class WeaponUIBuilder : ItemUIBuilder {
+    const itemsizex = 480;
+    const itemsizey = 64;
+    override void Build (Actor item, WRZFFrame parent, WRZFHandler handler, int ival,
+        WRZFBoxTextures inactive,WRZFBoxTextures hover,
+        WRZFBoxTextures click,WRZFBoxTextures disabled
+    ) {
+        // For now, these are regular buttons.
+        WRWeapon wep = WRWeapon(item);
+        if (!wep) { return; }
+        InvMenuHandler h = InvMenuHandler(handler);
+        if (!h) { return; } // H!
+        WRZFFrame itemframe = WRZFFrame.Create((0,0),(itemsizex,itemsizey));
+        itemframe.pack(parent);
+        let tx = TexMan.GetName(wep.Icon);
+        int sizex, sizey;
+        [sizex,sizey] = TexMan.GetSize(wep.Icon);
+        vector2 size = (sizex,sizey);
+        Vector2 btnsize = (itemsizex,itemsizey);
+        Vector2 pos = (0,0);
+        let ibtn = WRZFButton.Create (
+            pos,
+            btnsize,
+            cmdHandler: h,
+            command: "wep;" .. ival,
+            inactive: inactive,
+            hover: hover,
+            click: click,
+            disabled: disabled
+        );
+        ibtn.pack(itemframe);
+        let wepicon = WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2));
+        wepicon.setDontBlockMouse(true);
+        wepicon.pack(itemframe);
+        let wepname = WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",item.GetTag()),autosize:true);
+        wepname.setDontBlockMouse(true);
+        wepname.pack(itemframe);
     }
 }
 
@@ -163,20 +204,47 @@ class InvMenuView : WRZFGenericMenu {
     const padding = 2;
     const itemsizex = 480;
     const itemsizey = 64;
+    vector2 baseres;
 
     InvMenuHandler handler;
     WRZFFrame modframe;
+    WRZFFrame wepframe;
+    WRZFBoxTextures btex;
+    WRZFBoxTextures btex2;
 
-    void CreateItemList(in Array<Object> list,WRZFFrame listframe,ItemUIBuilder builder, WRZFBoxTextures b1, WRZFBoxTextures b2) {
+    void CreateItemList(in Array<Object> list,WRZFFrame listframe,ItemUIBuilder builder) {
         for (int i = 0; i < list.size(); i++) {
-            builder.Build(Actor(list[i]),listframe,handler,i,b2,b2,b1,b1);
+            builder.Build(Actor(list[i]),listframe,handler,i,btex2,btex2,btex,btex);
         }
     }
 
-    void SetupListFrame(in out WRZFFrame listframe, in Array<Object> list, WRZFFrame parent) {
-        int listlen = max(640,list.size() * itemsizey + padding);
-        listframe = WRZFListFrame.Create((4,4),(itemsizex,listlen),2.0);
+    void SetupListFrame(in out WRZFFrame listframe, in Array<Object> list, WRZFFrame parent,Vector2 pos, String pageprefix) {
+        int listlen = max(640,list.size() * (itemsizey + padding));
+        listframe = WRZFListFrame.Create(pos,(itemsizex,listlen),2.0);
         listframe.pack(parent);
+        // Page buttons.
+        WRZFButton.Create (
+            (pos.x+itemsizex+(2 * padding),pos.y + padding),
+            (16,32),
+            text: "^",
+            cmdHandler: handler,
+            command: pageprefix .. "page;-1",
+            inactive:btex,
+            hover:btex,
+            click:btex2,
+            textScale: 2
+        ).pack(mainFrame);
+        WRZFButton.Create (
+            (pos.x+itemsizex+(2 * padding),baseres.y - (32 + padding)),
+            (16,32),
+            text: "V",
+            cmdHandler: handler,
+            command: pageprefix .. "page;1",
+            inactive:btex,
+            hover:btex,
+            click:btex2,
+            textScale: 2
+        ).pack(mainFrame);
     }
 
     override void Init( Menu parent ) {
@@ -185,10 +253,10 @@ class InvMenuView : WRZFGenericMenu {
         handler.view = self;
         handler.init();
 
-        vector2 baseres = (1280,960);
+        baseres = (1280,960);
         setBaseResolution(baseres);
 
-        WRZFBoxTextures btex = WRZFBoxTextures.CreateTexturePixels (
+        btex = WRZFBoxTextures.CreateTexturePixels (
             "graphics/BBOX.png",
             (2,2),
             (6,6),
@@ -196,7 +264,7 @@ class InvMenuView : WRZFGenericMenu {
             false
         );
 
-        WRZFBoxTextures btex2 = WRZFBoxTextures.CreateTexturePixels (
+        btex2 = WRZFBoxTextures.CreateTexturePixels (
             "graphics/BBOX2.png",
             (2,2),
             (6,6),
@@ -221,31 +289,12 @@ class InvMenuView : WRZFGenericMenu {
 
 
         // Let's start simple: the list of mods in your inventory.
-        SetupListFrame(modframe,handler.mods,mainframe);
-        CreateItemList(handler.mods,modframe,new("ModUIBuilder"),btex,btex2);
+        SetupListFrame(modframe,handler.mods,mainframe,(4,4),"mod");
+        SetupListFrame(wepframe,handler.weapons,mainframe,(512,4),"wep");
+        // let mlist = ( Array<Object> )(handler.mods)
+        CreateItemList(handler.mods ,modframe,new("ModUIBuilder"));
+        CreateItemList(handler.weapons ,wepframe,new("WeaponUIBuilder"));
         // Buttons for paging.
-        WRZFButton.Create (
-            (itemsizex+(2 * padding),2),
-            (16,32),
-            text: "^",
-            cmdHandler: handler,
-            command: "modpage;-1",
-            inactive:btex,
-            hover:btex,
-            click:btex2,
-            textScale: 2
-        ).pack(mainFrame);
-        WRZFButton.Create (
-            (itemsizex+(2 * padding),baseres.y - 32),
-            (16,32),
-            text: "V",
-            cmdHandler: handler,
-            command: "modpage;1",
-            inactive:btex,
-            hover:btex,
-            click:btex2,
-            textScale: 2
-        ).pack(mainFrame);
     }
 
     override void ticker() {
