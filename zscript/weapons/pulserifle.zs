@@ -7,6 +7,7 @@ class PulseRifle : WRWeapon {
         Weapon.AmmoType1 "Pulse";
         Weapon.AmmoUse1 100;
         Weapon.AmmoGive1 100000;
+        Inventory.Icon "PLASA0";
     }
     
     override void PostBeginPlay() {
