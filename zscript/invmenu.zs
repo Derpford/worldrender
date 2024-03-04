@@ -45,6 +45,18 @@ class InvMenuHandler : WRZFHandler {
             pagemod += args[1].toInt();
             pagemod = clamp(pagemod,0,max(0,mods.size() - 10));
         }
+        if (args[0] == "weppage") {
+            pageweapon += args[1].toInt();
+            pageweapon = clamp(pagemod,0,max(0,mods.size() - 10));
+        }
+
+        if (args[0] == "modequip") {
+            // TODO: Mod swapping.
+            EventHandler.SendNetworkEvent("modequip",args[1]);
+        }
+        if (args[0] == "modremove") {
+            // EventHandler.SendNetworkEvent("modremove",args[0]);
+        }
     }
 
     void PopModList(Class filter, out Array<Object> items) {
@@ -88,105 +100,79 @@ class InvMenuHandler : WRZFHandler {
         // Populate the weapon, mod, and equipped lists.
         PopModList("WRModContainer",mods);
         PopWepList("WRWeapon",weapons,equipped);
-
+        InvEventHandler ie = InvEventHandler(EventHandler.Find("InvEventHandler"));
+        ie.commander = self; // So that it can find the data later.
     }
 }
 
-class ItemUIBuilder {
-    // Builds a Frame for an actor.
-    // Generally speaking, you should be inheriting from this and creating a more specific version.
-    virtual ui void Build(Actor item, WRZFFrame parent, WRZFHandler handler, int ival,
-        WRZFBoxTextures inactive = null,WRZFBoxTextures hover = null,
-        WRZFBoxTextures click = null,WRZFBoxTextures disabled = null
-    ) {}
-    // This function should build a frame, packing it into parent, using details of item.
-}
-
-class ModUIBuilder : ItemUIBuilder {
-    const itemsizex = 480;
-    const itemsizey = 64;
-    override void Build(Actor item, WRZFFrame parent, WRZFHandler handler, int ival,
-        WRZFBoxTextures inactive,WRZFBoxTextures hover,
-        WRZFBoxTextures click,WRZFBoxTextures disabled
-    ) {
-        WRModContainer container = WRModContainer(item);
-        if (!container) { return; }
-        InvMenuHandler h = InvMenuHandler(handler);
-        if (!h) { return; } // H!
-        WRZFFrame itemframe = WRZFFrame.Create((0,0),(itemsizex,itemsizey));
-        itemframe.pack(parent);
-        let tx = TexMan.GetName(container.Icon);
-        int sizex, sizey;
-        [sizex,sizey] = TexMan.GetSize(container.Icon);
-        vector2 size = (sizex,sizey);
-        Vector2 btnsize = (itemsizex,itemsizey);
-        Vector2 pos = (0,0);
-        let ibtn = WRZFRadioToggleButton.Create (
-            pos,
-            btnsize,
-            h.selmod,
-            ival,
-            inactive: inactive,
-            hover: hover,
-            click: click,
-            disabled: disabled,
-            cmdHandler: h,
-            command: "mod;" .. ival
-        );
-
-        ibtn.pack(itemframe);
-        let modicon = WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2));
-        modicon.setDontBlockMouse(true);
-        modicon.pack(itemframe);
-        let modname = WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",item.GetTag()),autosize:true);
-        modname.setDontBlockMouse(true);
-        modname.pack(itemframe);
-        for (int j = 0; j < container.modlist.size(); j++) {
-            let m = container.modlist[j];
-            let affixdesc = WRZFLabel.Create((48,9 + (9 * j)),btnsize,text:m.GetTag(),autosize:true);
-            affixdesc.setDontBlockMouse(true);
-            affixdesc.pack(itemframe);
+class InvEventHandler : EventHandler {
+    // Parses netevents to move items around, because you're not allowed to do that in UI scope.
+    InvMenuHandler commander;
+    override void NetworkProcess(ConsoleEvent e) {
+        // TODO: move mod equip/dequip logic here.
+        if (e.name == "modequip") {
+            WRModContainer m = commander.mods[commander.selmod.curval];
+            let plr = players[e.player].mo;
+            // We need to try adding m to the weapon. If this fails, abort.
+            let w = WRWeapon(commander.weapons[commander.sweapon]);
+            if (w.EquipMod(m,e.args[0])) {
+                // Find the item immediately before the modcontainer we're looking for.
+                let it = plr.inv;
+                while (inv & inv.inv != m) {
+                    inv = inv.inv;
+                } // After this exits, inv should be the item *BEFORE* m in the linked list.
+                inv.inv = m.inv;
+                m.inv = null; // At this point, m is removed from the inventory linked list.
+                commander.mods.delete(commander.selmod.val);
+                commander.view.InitModList(); // Redo the mod list!
+            }
+        }
+        if (e.name == "modremove") {
+            let w = WRWeapon(commander.weapons[commander.sweapon]);
+            let plr = players[e.player].mo;
+            WRModContainer m = w.RemoveMod(e.args[0]);
+            if (m) {
+                // Inserts M into the player's inventory.
+                plr.CallTryPickup(m);
+            }
         }
     }
 }
 
-class WeaponUIBuilder : ItemUIBuilder {
-    const itemsizex = 480;
-    const itemsizey = 64;
-    override void Build (Actor item, WRZFFrame parent, WRZFHandler handler, int ival,
-        WRZFBoxTextures inactive,WRZFBoxTextures hover,
-        WRZFBoxTextures click,WRZFBoxTextures disabled
-    ) {
-        // For now, these are regular buttons.
-        WRWeapon wep = WRWeapon(item);
-        if (!wep) { return; }
-        InvMenuHandler h = InvMenuHandler(handler);
-        if (!h) { return; } // H!
-        WRZFFrame itemframe = WRZFFrame.Create((0,0),(itemsizex,itemsizey));
-        itemframe.pack(parent);
-        let tx = TexMan.GetName(wep.Icon);
-        int sizex, sizey;
-        [sizex,sizey] = TexMan.GetSize(wep.Icon);
-        vector2 size = (sizex,sizey);
-        Vector2 btnsize = (itemsizex,itemsizey);
-        Vector2 pos = (0,0);
-        let ibtn = WRZFButton.Create (
-            pos,
-            btnsize,
-            cmdHandler: h,
-            command: "wep;" .. ival,
-            inactive: inactive,
-            hover: hover,
-            click: click,
-            disabled: disabled
-        );
-        ibtn.pack(itemframe);
-        let wepicon = WRZFImage.Create((12,24),size*2,tx,imageScale:(2,2));
-        wepicon.setDontBlockMouse(true);
-        wepicon.pack(itemframe);
-        let wepname = WRZFLabel.Create((1,1),btnsize,text:String.Format("%s",item.GetTag()),autosize:true);
-        wepname.setDontBlockMouse(true);
-        wepname.pack(itemframe);
+class InvManager : Inventory {
+    // Thank you to Jarewill's DWELLING SIN and its inventory implementation for this idea.
+    Array<WRWeapon> weapons;
+    Array<WRWeapon> equipped;
+    Array<WRModContainer> mods;
+
+    void DeleteMod(int index) {
+        // Remove a mod from the list.
+        WRModContainer m = mods[index];
+        mods.delete(index);
+        m.DetachFromOwner(); // Turns out there's a function for that!
+    }
+
+    void AddMod(WRModContainer mod) {
+        // Adds a mod to the list, presumably because it was unequipped from a weapon.
+        // Also adds that mod into the player's inventory. 
+        // TODO: decide if I even want the mods to go into the regular player inventory.
+        owner.CallTryPickup(mod);
+        mods.push(mod);
+    }
+
+    void EquipModToWeapon(int sweapon, int smod, int modslot) {
+        // Check if the weapon can accept a mod at the given slot.
+        // Then, delete the selected mod from the modlist, and insert it into that weapon's mod slot.
+    }
+
+    void RemoveModFromWeapon(int sweapon, int modslot) {
+        // Check if the weapon has a mod in that slot.
+        // Then, remove the mod from that slot--replacing that slot with null
+        // Add the mod into the player's inventory.
+    }
+
+    void GenerateMod(Class<WRModContainer> type) {
+        // Creates and adds a mod of the given type.
     }
 }
 
@@ -209,6 +195,9 @@ class InvMenuView : WRZFGenericMenu {
     InvMenuHandler handler;
     WRZFFrame modframe;
     WRZFFrame wepframe;
+    WRZFFrame modequipframe;
+    Array<WRZFImage> modequipicons; // Kinda gross, but...
+    Array<WRZFButton> modequipbtns;
     WRZFBoxTextures btex;
     WRZFBoxTextures btex2;
 
@@ -245,6 +234,12 @@ class InvMenuView : WRZFGenericMenu {
             click:btex2,
             textScale: 2
         ).pack(mainFrame);
+    }
+
+    void InitModList() {
+        // May have to be called again because the mod list changed.
+        SetupListFrame(modframe,handler.mods,mainframe,(4,4),"mod");
+        CreateItemList(handler.mods ,modframe,new("ModUIBuilder"));
     }
 
     override void Init( Menu parent ) {
@@ -289,16 +284,60 @@ class InvMenuView : WRZFGenericMenu {
 
 
         // Let's start simple: the list of mods in your inventory.
-        SetupListFrame(modframe,handler.mods,mainframe,(4,4),"mod");
+        InitModList();
         SetupListFrame(wepframe,handler.weapons,mainframe,(512,4),"wep");
-        // let mlist = ( Array<Object> )(handler.mods)
-        CreateItemList(handler.mods ,modframe,new("ModUIBuilder"));
         CreateItemList(handler.weapons ,wepframe,new("WeaponUIBuilder"));
-        // Buttons for paging.
+        // Also add a hidden-by-default frame for mods on a weapon.
+        modequipframe = WRZFFrame.Create((0,itemsizey * 0.5),(itemsizex,itemsizey * 0.5));
+        modequipframe.setHidden(true);
+        modequipframe.setDisabled(true);
+        modequipframe.pack(wepframe);
+        // Inside modequipframe, there are three buttons.
+        for (int i = 0; i < 3; i++) {
+            vector2 btnpos = (itemsizex * 0.25 + (itemsizex * 0.25 * i),itemsizey * 0.25);
+            vector2 btnsize = (itemsizey * 0.25,itemsizey * 0.25);
+            WRZFButton modbutton = WRZFButton.Create(
+                btnpos, btnsize,
+                "+",
+                cmdHandler: handler,
+                command: "modequip;" .. i,
+                inactive: btex2,
+                hover: btex,
+                click: btex2,
+                disabled: btex
+            );
+            modbutton.pack(modequipframe);
+            WRZFImage modimg = WRZFImage.Create(btnpos,btnsize); // Empty until we know what mods are in it.
+            modimg.pack(modequipframe);
+            modequipicons.push(modimg);
+        }
     }
 
     override void ticker() {
+        // Move the different list frames according to their page.
         modframe.SetPosY(4 - ((itemsizey + padding) * handler.pagemod));
+        wepframe.SetPosY(4 - ((itemsizey + padding) * handler.pageweapon));
+        // Is a weapon currently selected?
+        if (handler.sweapon >= 0) {
+            // Move the modequipframe to the correct position.
+            modequipframe.SetPosY((itemsizey * 0.25) + (itemsizey * handler.sweapon));
+            // Unhide it.
+            modequipframe.SetHidden(false);
+            modequipframe.SetDisabled(false);
+            // Set up the images.
+            let w = WRWeapon(handler.weapons[handler.sweapon]);
+            if (!w) { console.printf("Non-WRWeapon in weapons!"); return; }
+            for(int i = 0; i < w.mods.size(); i++) {
+                if (w.mods[i] && w.mods[i].icon) {
+                    let tx = TexMan.GetName(w.mods[i].Icon);
+                    modequipicons[i].SetImage(tx);
+                    modequipbtns[i].SetCommand("modremove;" .. i);
+                }
+            }
+        } else {
+            modequipframe.SetHidden(true);
+            modequipframe.SetDisabled(true);
+        }
         super.Ticker();
     }
 }

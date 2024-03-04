@@ -6,6 +6,7 @@ version "4.11"
 #include "zscript/weapon.zs"
 #include "zscript/ammo.zs"
 #include "zscript/weighted.zs"
+#include "zscript/uibuilder.zs"
 #include "zscript/invmenu.zs"
 // Mods.
 #include "zscript/mods/explosive.zs"
