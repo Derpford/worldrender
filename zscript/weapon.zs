@@ -15,6 +15,31 @@ class WRWeapon : Weapon abstract {
     default {
         WRWeapon.Spread (1,1), (0.1,0.2);
     }
+    
+    override void PostBeginPlay() {
+        mods.Reserve(3); // mods should always have 3 items in it.
+        super.PostBeginPlay();
+    }
+
+    bool EquipMod(WRModContainer mod, int slot) {
+        // Returns false if equipping fails, true if it succeeds.
+        if (mods[slot] == null) {
+            mods.insert(slot, mod);
+            mods.delete(slot+1);
+            mods.ShrinkToFit();
+            return true;
+        }
+        return false;
+    }
+
+    WRModContainer RemoveMod(int slot) {
+        if (mods[slot]) {
+            WRModContainer m = mods[slot];
+            mods[slot] = null;
+            return m;
+        }
+        return null;
+    }
 
     action void Fire(vector2 angofs = (0,0)) {
         if (invoker.DepleteAmmo(invoker.bALTFIRE)) {
