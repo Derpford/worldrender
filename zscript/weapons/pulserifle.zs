@@ -10,15 +10,6 @@ class PulseRifle : WRWeapon {
         Inventory.Icon "PLASA0";
     }
     
-    override void PostBeginPlay() {
-        // For testing purposes...
-        WRModContainer rapid = WRModContainer(Spawn("RapidModContainer")); rapid.BecomeItem();
-        WRModContainer exp = WRModContainer(Spawn("EModContainer")); exp.BecomeItem();
-        mods.push(exp);
-        mods.push(rapid);
-        super.PostBeginPlay();
-    }
-
     states {
         Spawn:
             PLAS A -1;
