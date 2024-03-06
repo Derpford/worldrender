@@ -3,6 +3,7 @@ version "4.11"
 // Libraries.
 #include "WRZForms/Include.zsc"
 // Core.
+#include "zscript/player.zs"
 #include "zscript/weapon.zs"
 #include "zscript/ammo.zs"
 #include "zscript/weighted.zs"
