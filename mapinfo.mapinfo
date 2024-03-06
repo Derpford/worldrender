@@ -1,0 +1,4 @@
+gameinfo {
+    PlayerClasses = "WRPlayer"
+    AddEventHandlers = "InvEventHandler"
+}
