@@ -3,20 +3,9 @@ class InvMenuHandler : WRZFHandler {
     // - Methods for changing a weapon's slotnumber, so that you can equip weapons to different slots.
     // - Methods for adding a modcont to a weapon. (This is supported by a function on the weapon.)
 
-    // - An array of weapons and an array of mods. This can be constructed when the menu opens.
-    // The array of mods may change due to the player generating a new mod. 
-    // The array of weapons *SHOULD* be static once it's generated.
-    Array<Object> weapons;
-    Array<Object> mods;
-    // - While building the weapons array, check the slot numbers to fill out a 'currently equipped' list.
-    Array<Object> equipped;
-    // I get to do all the type safety manually for these, because arrays can't be casted to other arrays for some reason.
-
     // - A selector for the 'current' weapon and 'current' modcont.
     int sweapon;
-    WRZFRadioController selweapon;
     int sequipped;
-    WRZFRadioController selequipped;
     int smod;
     WRZFRadioController selmod;
     // - Page selectors for the weapon/modcont lists. You should be able to view 10 of these at a time, I think.
@@ -39,11 +28,11 @@ class InvMenuHandler : WRZFHandler {
         
         if (args[0] == "modpage") {
             pagemod += args[1].toInt();
-            pagemod = clamp(pagemod,0,max(0,mods.size() - 10));
+            // pagemod = clamp(pagemod,0,max(0,mods.size() - 10));
         }
         if (args[0] == "weppage") {
             pageweapon += args[1].toInt();
-            pageweapon = clamp(pagemod,0,max(0,mods.size() - 10));
+            // pageweapon = clamp(pagemod,0,max(0,mods.size() - 10));
         }
 
         if (args[0] == "modequip") {
@@ -57,40 +46,10 @@ class InvMenuHandler : WRZFHandler {
         }
     }
 
-    void PopModList(Class filter, out Array<Object> items) {
-        let plr = players[consoleplayer].mo;
-        let inv = plr.inv;
-        while (inv) {
-            if(inv is filter) {
-                items.push(WRModContainer(inv));
-            }
-            inv = inv.inv;
-        }
-    }
-
-    void PopWepList(Class filter, out Array<Object> items, out Array<Object> equips) {
-        let plr = players[consoleplayer].mo;
-        let inv = plr.inv;
-        while (inv) {
-            if(inv is filter) {
-                items.push(WRWeapon(inv));
-                if (WRWeapon(inv).slotnumber) {
-                    // This item is equipped.
-                    equips.push(WRWeapon(inv));
-                }
-            }
-            inv = inv.inv;
-        }
-    }
-
     void Init() {
         sweapon = -1; // -1 means no selection.
         smod = -1;
         sequipped = -1;
-        selweapon = new("WRZFRadioController");
-        selweapon.curVal = -1;
-        selequipped = new("WRZFRadioController");
-        selequipped.curVal = -1;
         selmod = new("WRZFRadioController");
         selmod.curVal = -1;
         pageweapon = 0;
@@ -104,15 +63,10 @@ class InvMenuHandler : WRZFHandler {
 
 class InvEventHandler : EventHandler {
     // Parses netevents to move items around, because you're not allowed to do that in UI scope.
-    InvMenuHandler commander;
-
-    clearscope void SetCommander(InvMenuHandler handler) {
-        // commander = handler;
-    }
-
     override void NetworkProcess(ConsoleEvent e) {
         // TODO: move mod equip/dequip logic here.
         if (e.name == "invmenustart") {
+            console.printf("Received invmenustart");
             let plr = players[e.player].mo;
             InvManager im = InvManager(plr.FindInventory("InvManager"));
             im.poplists();
@@ -140,7 +94,6 @@ class InvManager : Inventory {
 
     void PopLists() {
         weapons.clear();
-        mods.clear();
         equipped.clear();
         let inv = owner.inv;
         console.printf("-- INIT INVMANAGER --");
@@ -148,7 +101,6 @@ class InvManager : Inventory {
             console.printf(inv.GetTag());
             if (inv.amount > 0) {
                 if (inv is "WRWeapon") weapons.push(WRWeapon(inv));
-                if (inv is "WRModContainer") mods.push(WRModContainer(inv));
             }
             inv = inv.inv;
         }
@@ -158,7 +110,7 @@ class InvManager : Inventory {
         // Remove a mod from the list.
         WRModContainer m = mods[index];
         mods.delete(index);
-        m.amount = 0; // Gross hax: mods are never actually removed from the inventory, their amount is just set to zero
+        // m.amount = 0; // Gross hax: mods are never actually removed from the inventory, their amount is just set to zero
     }
 
     void AddMod(WRModContainer mod) {
@@ -172,7 +124,7 @@ class InvManager : Inventory {
     override bool HandlePickup(Inventory item) {
         // When mods are added to the inventory, add them to the list!
         if (item is "WRModContainer") {
-            mods.push(WRModContainer(item));
+            mods.push(WRModContainer(item.CreateCopy(owner))); // No idea why THIS is what works.
         }
 
         return super.HandlePickup(item);
@@ -213,9 +165,6 @@ class InvManager : Inventory {
 
 class InvMenuView : WRZFGenericMenu {
     // The view for the inventory menu contains:
-    // - A list of weapons.
-    // - A list of mods.
-    // - A list of weapons that are currently equipped.
     // - Clicking on a weapon should select it, displaying its mods.
     // - Clicking on a mod should select it.
     // - With a weapon and a mod selected, the weapon's mod slots should then appear.
