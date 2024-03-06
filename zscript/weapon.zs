@@ -61,21 +61,25 @@ class WRWeapon : Weapon abstract {
 
     void CallOnFires(WRProj fired) {
         foreach (container : mods) {
-            foreach (m : container.modlist) {
-                m.OnFire(fired);
+            if (container) {
+                foreach (m : container.modlist) {
+                    m.OnFire(fired);
+                }
             }
         }
     }
 
     void CallOnHits(WRProj impact) {
         foreach (container : mods) {
-            foreach (m : container.modlist) {
-                if (impact.TriggeredOnHits.find(m.GetClassName()) == impact.TriggeredOnHits.size()) {
-                    // This on-hit isn't blacklisted yet.
-                    bool res = m.OnHit(impact,impact.tracer);
-                    if (!res) {
-                        impact.TriggeredOnHits.push(m.getclassname());
-                        // This on-hit should not trigger again for this 'chain'.
+            if (container) {
+                foreach (m : container.modlist) {
+                    if (impact.TriggeredOnHits.find(m.GetClassName()) == impact.TriggeredOnHits.size()) {
+                        // This on-hit isn't blacklisted yet.
+                        bool res = m.OnHit(impact,impact.tracer);
+                        if (!res) {
+                            impact.TriggeredOnHits.push(m.getclassname());
+                            // This on-hit should not trigger again for this 'chain'.
+                        }
                     }
                 }
             }
